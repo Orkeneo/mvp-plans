@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orkeneo - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        .language-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .language-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .language-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .language-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .language-slider {
+            background-color: #4f46e5;
+        }
+        
+        input:checked + .language-slider:before {
+            transform: translateX(30px);
+        }
+        
+        .sidebar-icon {
+            transition: all 0.3s;
+        }
+        
+        .sidebar-icon:hover {
+            transform: translateX(5px);
+        }
+        
+        .card {
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .inventory-status {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .status-normal {
+            background-color: #10b981;
+        }
+        
+        .status-low {
+            background-color: #f59e0b;
+        }
+        
+        .status-critical {
+            background-color: #ef4444;
+        }
+
+        /* PWA-like additions */
+        @media (max-width: 640px) {
+            .mobile-menu {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                display: flex;
+                justify-content: space-around;
+                padding: 0.5rem;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+                z-index: 50;
+            }
+            
+            .desktop-sidebar {
+                display: none;
+            }
+            
+            .main-content {
+                padding-bottom: 70px;
+            }
+        }
+
+        /* Language specific styles */
+        .hindi {
+            display: none;
+        }
+
+        body.hindi-active .english {
+            display: none;
+        }
+
+        body.hindi-active .hindi {
+            display: inline-block;
+        }
+
+        /* Progress bars */
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e5e7eb;
+            overflow: hidden;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .prediction-badge {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen bg-gray-100">
+        <!-- Sidebar - Desktop -->
+        <div class="desktop-sidebar hidden sm:flex flex-col w-64 bg-indigo-600 text-white">
+            <div class="p-4 flex items-center justify-left border-b border-indigo-800">
+                <img src="./icon_white.png" alt="Logo" class="h-8 w-8 rounded-md">
+                <h1 class="ml-2 font-bold text-xl">Orkeneo</h1>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <nav class="mt-5 px-2">
+                    <a href="./dashboard.html" class="group flex items-center px-4 py-3 text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-md mb-1">
+                        <i class="fas fa-chart-line mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">Dashboard</span>
+                        <span class="hindi">डैशबोर्ड</span>
+                    </a>
+                    <a href="./forecasting.html" class="group flex items-center px-4 py-3 text-white bg-indigo-800 rounded-md mb-1">
+                        <i class="fas fa-calculator mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">Forecasting</span>
+                        <span class="hindi">पूर्वानुमान</span>
+                    </a>
+                    <a href="#" class="group flex items-center px-4 py-3 text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-md mb-1">
+                        <i class="fas fa-box mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">Inventory</span>
+                        <span class="hindi">इन्वेंटरी</span>
+                    </a>
+                    <a href="#" class="group flex items-center px-4 py-3 text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-md mb-1">
+                        <i class="fas fa-shopping-cart mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">POS Integration</span>
+                        <span class="hindi">पीओएस एकीकरण</span>
+                    </a>
+                    <a href="#" class="group flex items-center px-4 py-3 text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-md mb-1">
+                        <i class="fas fa-list-check mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">Prep Lists</span>
+                        <span class="hindi">तैयारी सूची</span>
+                    </a>
+                    <a href="#" class="group flex items-center px-4 py-3 text-indigo-300 hover:bg-indigo-800 hover:text-white rounded-md mb-1">
+                        <i class="fas fa-trash mr-3 text-indigo-300 sidebar-icon"></i>
+                        <span class="english">Waste Tracking</span>
+                        <span class="hindi">अपशिष्ट ट्रैकिंग</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="p-4 border-t border-indigo-800">
+                <div class="flex items-center">
+                    <img src="./raj-restaurant.png" alt="User" class="h-8 w-8 rounded-full">
+                    <div class="ml-3">
+                        <p class="font-medium text-sm">Raj's Restaurant</p>
+                        <p class="text-xs text-indigo-300">Admin</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden main-content">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow-sm z-10">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center">
+                            <button class="sm:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <h1 class="ml-2 text-2xl font-semibold text-gray-900 english">Forecast</h1>
+                            <h1 class="ml-2 text-2xl font-semibold text-gray-900 hindi">पूर्वानुमान</h1>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <div class="flex items-center mr-4">
+                                <span class="mr-2 text-sm text-gray-600 english">EN</span>
+                                <label class="language-switch">
+                                    <input type="checkbox" id="languageToggle">
+                                    <span class="language-slider"></span>
+                                </label>
+                                <span class="ml-2 text-sm text-gray-600 english">हिंदी</span>
+                                <span class="ml-2 text-sm text-gray-600 hindi">हिंदी</span>
+                            </div>
+                            
+                            <div class="ml-3 relative">
+                                <div class="flex items-center space-x-4">
+                                    <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none">
+                                        <i class="fas fa-bell"></i>
+                                    </button>
+                                    <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Dashboard Content -->
+            <main class="flex-1 relative overflow-y-auto p-4 sm:p-6 bg-gray-50">
+                <div class="mx-auto">
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                                        <i class="fas fa-utensils text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                Forecasted Orders Today
+                                            </dt>
+                                            <dd class="flex items-baseline">
+                                                <div class="text-2xl font-semibold text-gray-900">
+                                                    187
+                                                </div>
+                                                <div class="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                                                    <i class="fas fa-arrow-up"></i>
+                                                    <span class="sr-only">Increased by</span>
+                                                    12%
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-green-100 rounded-md p-3">
+                                        <i class="fas fa-rupee-sign text-green-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                Projected Revenue
+                                            </dt>
+                                            <dd class="flex items-baseline">
+                                                <div class="text-2xl font-semibold text-gray-900">
+                                                    ₹42,500
+                                                </div>
+                                                <div class="ml-2 flex items-baseline text-sm font-semibold text-green-600">
+                                                    <i class="fas fa-arrow-up"></i>
+                                                    <span class="sr-only">Increased by</span>
+                                                    8.3%
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-yellow-100 rounded-md p-3">
+                                        <i class="fas fa-calendar-alt text-yellow-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                Upcoming Events
+                                            </dt>
+                                            <dd class="flex items-baseline">
+                                                <div class="text-2xl font-semibold text-gray-900">
+                                                    2
+                                                </div>
+                                                <div class="ml-2 flex items-baseline text-sm font-semibold text-blue-600">
+                                                    <i class="fas fa-calendar-plus"></i>
+                                                    <span class="ml-1">Diwali, Cricket Match</span>
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-red-100 rounded-md p-3">
+                                        <i class="fas fa-cloud-sun-rain text-red-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                Weather Impact
+                                            </dt>
+                                            <dd class="flex items-baseline">
+                                                <div class="text-2xl font-semibold text-gray-900">
+                                                    -6%
+                                                </div>
+                                                <div class="ml-2 flex items-baseline text-sm font-semibold text-red-600">
+                                                    <i class="fas fa-tint"></i>
+                                                    <span class="ml-1">Rain Expected</span>
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time Range Selector -->
+                    <div class="bg-white shadow rounded-lg p-4 mb-6">
+                        <div class="flex flex-wrap items-center justify-between">
+                            <h2 class="text-lg font-medium text-gray-900 mb-3 sm:mb-0">Forecast Time Range</h2>
+                            <div class="flex flex-wrap space-x-2">
+                                <button class="px-4 py-2 bg-blue-600 text-white rounded-md focus:outline-none">Today</button>
+                                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md focus:outline-none">This Week</button>
+                                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md focus:outline-none">This Month</button>
+                                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md focus:outline-none">Custom</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- 1. Historical Sales Analysis -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">Historical Sales Analysis</h2>
+                                <div class="tooltip">
+                                    <i class="fas fa-info-circle text-gray-500"></i>
+                                    <span class="tooltip-text">Analysis based on 12 months of sales data with pattern recognition</span>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span>Pattern Recognition Confidence</span>
+                                    <span class="font-medium">78%</span>
+                                </div>
+                                <div class="progress-indicator">
+                                    <div class="progress-bar bg-blue-500" style="width: 78%"></div>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="historicalSalesChart"></canvas>
+                            </div>
+                            <div class="mt-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-blue-50 p-3 rounded-md">
+                                        <p class="text-sm font-medium text-blue-800">Key Pattern</p>
+                                        <p class="text-sm text-blue-600">Sales peak on weekends (+32%)</p>
+                                    </div>
+                                    <div class="bg-blue-50 p-3 rounded-md">
+                                        <p class="text-sm font-medium text-blue-800">Seasonal Trend</p>
+                                        <p class="text-sm text-blue-600">+18% during Oct-Dec festival season</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Day & Time Prediction Model -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">Day & Time Prediction Model</h2>
+                                <div class="tooltip">
+                                    <i class="fas fa-info-circle text-gray-500"></i>
+                                    <span class="tooltip-text">Hourly demand forecast based on historical patterns</span>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-sm text-gray-600">Day:</span>
+                                    <div class="flex space-x-1">
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">M</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">T</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">W</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">T</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">F</button>
+                                        <button class="px-2 py-1 text-xs bg-blue-600 text-white rounded">S</button>
+                                        <button class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">S</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="dayTimePredictionChart"></canvas>
+                            </div>
+                            <div class="mt-4 grid grid-cols-3 gap-2">
+                                <div class="prediction-badge bg-yellow-100 px-3 py-2 rounded-full text-center">
+                                    <span class="text-xs font-medium text-yellow-800">Peak: 7-9 PM</span>
+                                </div>
+                                <div class="prediction-badge bg-green-100 px-3 py-2 rounded-full text-center">
+                                    <span class="text-xs font-medium text-green-800">Lunch: 12-2 PM</span>
+                                </div>
+                                <div class="prediction-badge bg-red-100 px-3 py-2 rounded-full text-center">
+                                    <span class="text-xs font-medium text-red-800">Low: 3-5 PM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Second Row Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- 3. Special Event Impact Prediction -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">Special Event Impact Prediction</h2>
+                                <div class="tooltip">
+                                    <i class="fas fa-info-circle text-gray-500"></i>
+                                    <span class="tooltip-text">Predicted impact of upcoming festivals and events</span>
+                                </div>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="chart-container" style="height: 200px;">
+                                    <canvas id="eventImpactChart"></canvas>
+                                </div>
+                                <div class="mt-6">
+                                    <div class="relative">
+                                        <div class="flex items-center space-x-4 overflow-x-auto pb-2">
+                                            <div class="flex-shrink-0 w-64 bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500">
+                                                <h4 class="text-sm font-medium text-indigo-800 mb-1">Diwali Festival</h4>
+                                                <p class="text-xs text-indigo-600 mb-2">Nov 12-14</p>
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                                                    <span class="text-sm font-medium text-green-600">+45% projected increase</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-shrink-0 w-64 bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                                                <h4 class="text-sm font-medium text-blue-800 mb-1">India vs. Aus Cricket</h4>
+                                                <p class="text-xs text-blue-600 mb-2">Oct 28</p>
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                                                    <span class="text-sm font-medium text-green-600">+28% projected increase</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-shrink-0 w-64 bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                                                <h4 class="text-sm font-medium text-purple-800 mb-1">Durga Puja</h4>
+                                                <p class="text-xs text-purple-600 mb-2">Oct 22-26</p>
+                                                <div class="flex items-center">
+                                                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                                                    <span class="text-sm font-medium text-green-600">+32% projected increase</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Weather Impact Correlation -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">Weather Impact Correlation</h2>
+                                <div class="tooltip">
+                                    <i class="fas fa-info-circle text-gray-500"></i>
+                                    <span class="tooltip-text">How weather conditions affect your sales based on historical data</span>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="weatherImpactChart"></canvas>
+                            </div>
+                            <div class="mt-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-gray-50 p-3 rounded-md">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-cloud-rain text-blue-500 mr-2"></i>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-800">Rainy Weather</p>
+                                                <p class="text-sm text-gray-600">-12% dine-in, +28% delivery</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-md">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-temperature-high text-red-500 mr-2"></i>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-800">Hot Weather (>35°C)</p>
+                                                <p class="text-sm text-gray-600">-8% overall, +15% cold beverages</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 p-3 rounded-md bg-blue-50">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-exclamation-circle text-blue-600 mr-2"></i>
+                                        <p class="text-sm text-blue-800">Weather forecast for next week shows rain on Wednesday & Thursday. Expect increased delivery orders and decreased dine-in.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Restaurant-Specific Customization -->
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-medium text-gray-900">Restaurant-Specific Customization</h2>
+                            <button class="text-sm text-blue-600 flex items-center">
+                                <i class="fas fa-save mr-1"></i> Save Changes
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Cuisine Type Adjustments -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-md font-medium text-gray-800 mb-3">Cuisine Type</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Primary Cuisine</label>
+                                        <select class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm custom-select">
+                                            <option selected>North Indian</option>
+                                            <option>South Indian</option>
+                                            <option>Chinese</option>
+                                            <option>Continental</option>
+                                            <option>Street Food</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Secondary Cuisine</label>
+                                        <select class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm custom-select">
+                                            <option>None</option>
+                                            <option selected>Chinese</option>
+                                            <option>South Indian</option>
+                                            <option>Continental</option>
+                                            <option>Street Food</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Spice Level Preference</label>
+                                        <div class="flex space-x-1">
+                                            <div class="w-1/4 h-2 bg-red-200 rounded-l-full"></div>
+                                            <div class="w-1/4 h-2 bg-red-300"></div>
+                                            <div class="w-1/4 h-2 bg-red-400"></div>
+                                            <div class="w-1/4 h-2 bg-red-500 rounded-r-full"></div>
+                                        </div>
+                                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                            <span>Mild</span>
+                                            <span>Medium</span>
+                                            <span>Spicy</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Service Type Consideration -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-md font-medium text-gray-800 mb-3">Service Type Distribution</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                            <span>Dine-in</span>
+                                            <span class="font-medium">45%</span>
+                                        </div>
+                                        <div class="progress-indicator">
+                                            <div class="progress-bar bg-green-500" style="width: 45%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                            <span>Takeaway</span>
+                                            <span class="font-medium">25%</span>
+                                        </div>
+                                        <div class="progress-indicator">
+                                            <div class="progress-bar bg-yellow-500" style="width: 25%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                            <span>Delivery</span>
+                                            <span class="font-medium">30%</span>
+                                        </div>
+                                        <div class="progress-indicator">
+                                            <div class="progress-bar bg-blue-500" style="width: 30%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button class="text-xs text-blue-600 flex items-center">
+                                            <i class="fas fa-sync-alt mr-1"></i> Recalculate from POS Data
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Location-based Factors -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="text-md font-medium text-gray-800 mb-3">Location Factors</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Restaurant Area</label>
+                                        <select class="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm custom-select">
+                                            <option>Residential</option>
+                                            <option selected>Business District</option>
+                                            <option>Shopping Mall</option>
+                                            <option>Tourist Area</option>
+                                            <option>Highway/Roadside</option>
+                                        </select>
+                                    </div>
+                                    <div class="mt-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Average Customer Demographics</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div class="flex items-center">
+                                                <input id="age-group-1" name="age-group" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                                                <label for="age-group-1" class="ml-2 block text-sm text-gray-700">Young Professionals</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input id="age-group-2" name="age-group" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                                                <label for="age-group-2" class="ml-2 block text-sm text-gray-700">Families</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input id="age-group-3" name="age-group" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                <label for="age-group-3" class="ml-2 block text-sm text-gray-700">Students</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input id="age-group-4" name="age-group" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                <label for="age-group-4" class="ml-2 block text-sm text-gray-700">Tourists</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Peak Business Hours</label>
+                                        <div class="text-sm bg-white p-2 border border-gray-300 rounded-md">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded mr-1">12PM-3PM</span>
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded">7PM-11PM</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights Cards -->
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">AI-Generated Insights</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="insight-card bg-white shadow rounded-lg overflow-hidden">
+                            <div class="bg-indigo-600 px-4 py-2">
+                                <h3 class="text-sm font-medium text-white">Sales Pattern Insight</h3>
+                            </div>
+                            <div class="p-4">
+                                <p class="text-sm text-gray-700 mb-3">Your restaurant shows a strong weekly pattern with Friday and Saturday sales 37% higher than mid-week days. Consider adjusting staffing and inventory accordingly.</p>
+                                <div class="text-xs text-gray-500">Based on data from: Last 12 months</div>
+                            </div>
+                        </div>
+                        <div class="insight-card bg-white shadow rounded-lg overflow-hidden">
+                            <div class="bg-green-600 px-4 py-2">
+                                <h3 class="text-sm font-medium text-white">Seasonal Trend Insight</h3>
+                            </div>
+                            <div class="p-4">
+                                <p class="text-sm text-gray-700 mb-3">Your sales increase by 22% during the winter months (Nov-Feb). Consider seasonal menu items and promotions to maximize this trend.</p>
+                                <div class="text-xs text-gray-500">Based on data from: 24-month analysis</div>
+                            </div>
+                        </div>
+                        <div class="insight-card bg-white shadow rounded-lg overflow-hidden">
+                            <div class="bg-yellow-600 px-4 py-2">
+                                <h3 class="text-sm font-medium text-white">Opportunity Alert</h3>
+                            </div>
+                            <div class="p-4">
+                                <p class="text-sm text-gray-700 mb-3">Delivery orders increase 32% during rainy weather. Consider investing in delivery packaging and increasing delivery staff during monsoon season.</p>
+                                <div class="text-xs text-gray-500">Based on data from: Weather correlation study</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Mobile Navigation Menu -->
+    <div class="mobile-menu sm:hidden">
+        <a href="./dashboard.html" class="flex flex-col items-center justify-center text-gray-500">
+            <i class="fas fa-chart-line text-xl"></i>
+            <span class="text-xs mt-1 english">Dashboard</span>
+            <span class="text-xs mt-1 hindi">डैशबोर्ड</span>
+        </a>
+        <a href="./forecasting.html" class="flex flex-col items-center justify-center text-indigo-600">
+            <i class="fas fa-calculator text-xl"></i>
+            <span class="text-xs mt-1 english">Forecast</span>
+            <span class="text-xs mt-1 hindi">पूर्वानुमान</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center text-gray-500">
+            <i class="fas fa-box text-xl"></i>
+            <span class="text-xs mt-1 english">Inventory</span>
+            <span class="text-xs mt-1 hindi">इन्वेंटरी</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center text-gray-500">
+            <i class="fas fa-list-check text-xl"></i>
+            <span class="text-xs mt-1 english">Prep List</span>
+            <span class="text-xs mt-1 hindi">प्रेप लिस्ट</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center text-gray-500">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-xs mt-1 english">Account</span>
+            <span class="text-xs mt-1 hindi">अकाउंट</span>
+        </a>
+    </div>
+    
+    <script>
+        // Historical Sales Analysis Chart
+        const historicalSalesCtx = document.getElementById('historicalSalesChart').getContext('2d');
+        const historicalSalesChart = new Chart(historicalSalesCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [
+                    {
+                        label: 'Actual Sales',
+                        data: [2800, 2600, 2850, 3000, 3200, 3100, 3400, 3300, 3500, 3900, 4200, 4500],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Predicted Pattern',
+                        data: [2750, 2650, 2900, 3050, 3150, 3050, 3350, 3400, 3550, 3950, 4150, 4400],
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Sales (₹ thousands)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Day & Time Prediction Chart
+        const dayTimePredictionCtx = document.getElementById('dayTimePredictionChart').getContext('2d');
+        const dayTimePredictionChart = new Chart(dayTimePredictionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['7-9 AM', '9-11 AM', '11-1 PM', '1-3 PM', '3-5 PM', '5-7 PM', '7-9 PM', '9-11 PM'],
+                datasets: [
+                    {
+                        label: 'Predicted Orders',
+                        data: [15, 22, 35, 28, 16, 24, 42, 30],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Actual Orders (Last Saturday)',
+                        data: [14, 20, 33, 30, 18, 26, 45, 32],
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Orders'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Event Impact Chart
+        const eventImpactCtx = document.getElementById('eventImpactChart').getContext('2d');
+        const eventImpactChart = new Chart(eventImpactCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Normal Day', 'Diwali', 'Cricket Match', 'Durga Puja', 'New Year Eve'],
+                datasets: [
+                    {
+                        label: 'Predicted Order Volume (%)',
+                        data: [100, 145, 128, 132, 160],
+                        backgroundColor: [
+                            'rgba(107, 114, 128, 0.7)',
+                            'rgba(79, 70, 229, 0.7)',
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(139, 92, 246, 0.7)',
+                            'rgba(236, 72, 153, 0.7)'
+                        ],
+                        borderColor: [
+                            '#6b7280',
+                            '#4f46e5',
+                            '#3b82f6',
+                            '#8b5cf6',
+                            '#ec4899'
+                        ],
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Order Volume (% of Normal)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Weather Impact Chart
+        const weatherImpactCtx = document.getElementById('weatherImpactChart').getContext('2d');
+        const weatherImpactChart = new Chart(weatherImpactCtx, {
+            type: 'line',
+            data: {
+                labels: ['Clear', 'Cloudy', 'Light Rain', 'Heavy Rain', 'Very Hot', 'Very Cold'],
+                datasets: [
+                    {
+                        label: 'Dine-in',
+                        data: [100, 95, 88, 65, 80, 90],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Takeaway',
+                        data: [100, 105, 110, 95, 115, 105],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Delivery',
+                        data: [100, 105, 120, 145, 110, 108],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 60,
+                        title: {
+                            display: true,
+                            text: 'Order Volume (% of Normal)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Mobile sidebar toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.querySelector('button[aria-label="Open sidebar"]');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    const sidebar = document.querySelector('.md\\:flex-shrink-0');
+                    sidebar.classList.toggle('hidden');
+                    sidebar.classList.toggle('flex');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
